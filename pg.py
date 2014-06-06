@@ -20,7 +20,9 @@ class SimpleGPG(object):
         self.gpg = gnupg.GPG(gnupghome=self.KEY_DIR, gpgbinary=self.GPG_BINARY)
         self.signer_fingerprint = ''
         self.reciever_fingerprint = ''
+        self.passphrase = None
         self.find_keys()
+
 
     def log(self, msg):
         print msg
@@ -56,9 +58,10 @@ class SimpleGPG(object):
         }
         params['Name-Real'] = '%s %s' % (first_name, last_name)
         params['Name-Email'] = ("%s.%s@%s" % (first_name, last_name, domain)).lower()
-        #if passphrase is None:
-            #passphrase = ("%s%s" % (first_name[0], last_name)).lower()
-        #params['Passphrase'] = passphrase
+        self.passphrase = passphrase
+        if passphrase is None:
+            self.passphrase = ("%s%s" % (first_name[0], last_name)).lower()
+        params['Passphrase'] = self.passphrase
 
         self.log('generating keys')
         cmd = self.gpg.gen_key_input(**params)
@@ -73,7 +76,7 @@ class SimpleGPG(object):
             open(file_, 'rb'),
             self.reciever_fingerprint,
             sign=self.signer_fingerprint,
-            #passphrase='andy',
+            passphrase=self.passphrase,
             output=self.ENCRYPTED_FILE)
 
         assert encrypted.status is not None
@@ -85,8 +88,9 @@ class SimpleGPG(object):
         if os.path.exists(self.ENCRYPTED_FILE):
             data = open(self.ENCRYPTED_FILE, 'r').read()
             self.save_remove_file(self.DECRYPTED_FILE)
-            decrypted = self.gpg.decrypt(data, passphrase='bbrown', output=self.DECRYPTED_FILE)
-            self.print_info(decrypted)
+            decrypted = self.gpg.decrypt(data, passphrase=self.passphrase,
+                                         output=self.DECRYPTED_FILE)
+            #self.print_info(decrypted)
             res = True
         return res
 
@@ -94,7 +98,8 @@ class SimpleGPG(object):
         """d = self.gpg.sign_file(open('file_111', 'w'))
         resf = open('res', 'w')
         resf.writelines(d.data)"""
-        os.popen('gpg --clearsign --detach-sign -a %s '%(str(f)))
+        print self.passphrase
+        os.popen('gpg --passphrase %s --clearsign --detach-sign -a %s '%(self.passphrase, str(f)))
 
     def save_remove_file(self, f):
         if os.path.isfile(f):

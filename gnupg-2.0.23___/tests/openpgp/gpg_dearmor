@@ -1,2 +1,0 @@
-#!/bin/sh
-../../g10/gpg2 --homedir . --no-options --no-greeting              --no-secmem-warning --batch --dearmor
