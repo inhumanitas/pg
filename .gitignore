@@ -1,0 +1,7 @@
+*.pyc
+*.sqlite3db
+*~
+*.log
+*.db
+.idea/*
+#*#
