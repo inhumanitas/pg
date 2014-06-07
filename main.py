@@ -12,7 +12,7 @@ class PGMainWindow(Ui_MainWindow, QtGui.QDialog):
 
     def __init__(self):
         super(PGMainWindow, self).__init__()
-        self.encrypt_file = None
+        self.encrypt_file = u''
 
     def setupUi(self, MainWindow):
         super(PGMainWindow, self).setupUi(MainWindow)
@@ -41,6 +41,7 @@ class PG(object):
     u""" GUI App for signing files """
 
     def __init__(self):
+	self.pg = SimpleGPG()
         self.ui = PGMainWindow()
         self.ui.setupUi(QMainWindow)
         self.ui.connect(self.ui.btnCrypt, QtCore.SIGNAL('clicked()'), self.crypt_file)
@@ -48,13 +49,13 @@ class PG(object):
         self.ui.connect(self.ui.btnSign, QtCore.SIGNAL('clicked()'), self.sign_file)
 
         QMainWindow.show()
-        self.pg = SimpleGPG()
+        
 
     def crypt_file(self):
         print self.ui.encrypt_file
         log = u'Выберите файл для шифрования'
         if self.ui.encrypt_file:
-            log = u'Начато шифрование'
+            self.ui.update_info(u'Начато шифрование')
             is_encrypted = self.pg.encrypt(self.ui.encrypt_file)
             if is_encrypted:
                 log = u'Шифрование завершилось'
@@ -74,6 +75,7 @@ class PG(object):
         self.ui.update_info(log)
 
     def sign_file(self):
+        #self.ui.update_info(u'Старт процесса подписи')
         signed_data = self.pg.sign(self.ui.encrypt_file)
         res = u'Подпись файла завершилось неудачей'
         if signed_data:

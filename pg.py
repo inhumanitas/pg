@@ -8,8 +8,6 @@ class SimpleGPG(object):
     u"""
         Let sign files via gnupg
     """
-    # folder store keys
-    KEY_DIR = 'keys'
     # binary to run all stuff used by gnupg wrapper
     GPG_BINARY = '..\GnuPG\pub\gpg.exe'
     ENCRYPTED_FILE = 'encrypted'
@@ -17,28 +15,35 @@ class SimpleGPG(object):
     SIGN_FILE = 'signed.txt.sig'
     
     def __init__(self):
+        from os.path import expanduser
+        home = expanduser("~")
+        self.KEY_DIR = ''.join([home, u"\AppData\Roaming\gnupg"])
         self.gpg = gnupg.GPG(gnupghome=self.KEY_DIR, gpgbinary=self.GPG_BINARY)
         self.signer_fingerprint = ''
         self.reciever_fingerprint = ''
-        self.passphrase = 'qwrety'
+        self.passphrase = 'qwerty'
         self.find_keys()
 
     def log(self, msg):
         print msg
 
     def find_keys(self):
+        print self.KEY_DIR
         pubring_path = os.path.join(self.KEY_DIR, 'pubring.gpg')
         secring_path = os.path.join(self.KEY_DIR, 'secring.gpg')
         if os.path.exists(pubring_path) and os.path.exists(secring_path):
             self.log('loading keys')
-            self.signer_fingerprint = self.gpg.import_keys(open(secring_path, 'rb').read()).fingerprints[0]
-            self.reciever_fingerprint = self.gpg.import_keys(open(pubring_path, 'rb').read()).fingerprints[1]
-            self.log('loaded keys')
+            self.signer_fingerprint = self.gpg.import_keys(
+                open(secring_path, 'rb').read()).fingerprints[0]
+            self.reciever_fingerprint = self.gpg.import_keys(
+                open(pubring_path, 'rb').read()).fingerprints[1]
             self.log(self.signer_fingerprint)
             self.log(self.reciever_fingerprint)
+            self.log('loaded keys')
         else:
             # If needed generate keys else use existing
-            key = self._generate_key("UserName", "UserFName", "usersite.com")
+            key = self._generate_key(
+                "UserName", "UserFName", "usersite.com", passphrase=None)
             self.signer_fingerprint = key.fingerprint
             key = self._generate_key( "Barbara", "Brown", "beta.com")
             self.reciever_fingerprint = key.fingerprint
@@ -55,12 +60,13 @@ class SimpleGPG(object):
         params['Name-Real'] = '%s %s' % (first_name, last_name)
         params['Name-Email'] = ("%s.%s@%s" % (first_name, last_name, domain)).lower()
         if passphrase is not None:
-			self.passphrase = passphrase
+            self.passphrase = passphrase
  
         params['Passphrase'] = self.passphrase
 
         self.log('generating keys')
         cmd = self.gpg.gen_key_input(**params)
+        print cmd
         key = self.gpg.gen_key(cmd)
         self.log('done generate')
 
@@ -79,24 +85,31 @@ class SimpleGPG(object):
         return os.path.exists(self.ENCRYPTED_FILE)
 
     def decrypt(self):
-        # Data is in encrypted.txt. Read it in and verify/decrypt it.
         res = False
         if os.path.exists(self.ENCRYPTED_FILE):
             data = open(self.ENCRYPTED_FILE, 'r').read()
             self.save_remove_file(self.DECRYPTED_FILE)
             decrypted = self.gpg.decrypt(data, passphrase=self.passphrase,
                                          output=self.DECRYPTED_FILE)
-            #self.print_info(decrypted)
+ 
             res = True
         return res
 
     def sign(self, f):
-        d = self.gpg.sign_file(open(f, 'r'))
+        if not os.path.isfile(f):
+            return ''
+        with open(f, 'r') as f_h:
+            d = self.gpg.sign_file(f_h)
+            
         self.log('had signed message. result:\n %s'%d.data)
-        resf = open(self.SIGN_FILE, 'w')
-        resf.writelines(d.data)
+        if d.data:
+            resf = open(self.SIGN_FILE, 'w')
+            resf.writelines(d.data)
+        
+        print f
+        #subprocess.call(u'%s --passphrase %s --clearsign --detach-sign -a %s '%(self.GPG_BINARY, self.passphrase, f), shell=True)
         return d.data
-        #subprocess.call(u'gpg --passphrase %s --clearsign --detach-sign -a 1.txt '%(self.passphrase), shell=True)
+        
 
     def save_remove_file(self, f):
         if os.path.isfile(f):
@@ -112,3 +125,4 @@ class SimpleGPG(object):
 
 if __name__ == '__main__':
     gpg_work = SimpleGPG()
+    gpg_work.sign('pg.py')
