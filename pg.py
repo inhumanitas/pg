@@ -1,9 +1,8 @@
 #coding: utf-8
 
 import gnupg
-
 import os
-
+import subprocess
 
 class SimpleGPG(object):
     u"""
@@ -12,17 +11,17 @@ class SimpleGPG(object):
     # folder store keys
     KEY_DIR = 'keys'
     # binary to run all stuff used by gnupg wrapper
-    GPG_BINARY = 'gpg'
+    GPG_BINARY = '..\GnuPG\pub\gpg.exe'
     ENCRYPTED_FILE = 'encrypted'
     DECRYPTED_FILE = 'decrypted'
-
+    SIGN_FILE = 'signed.txt.sig'
+    
     def __init__(self):
         self.gpg = gnupg.GPG(gnupghome=self.KEY_DIR, gpgbinary=self.GPG_BINARY)
         self.signer_fingerprint = ''
         self.reciever_fingerprint = ''
-        self.passphrase = None
+        self.passphrase = 'qwrety'
         self.find_keys()
-
 
     def log(self, msg):
         print msg
@@ -39,13 +38,10 @@ class SimpleGPG(object):
             self.log(self.reciever_fingerprint)
         else:
             # If needed generate keys else use existing
-            key = self._generate_key("UserName", "UserFName", "usersite.com",
-                                     passphrase="qwerty")
-            print key.fingerprint
+            key = self._generate_key("UserName", "UserFName", "usersite.com")
             self.signer_fingerprint = key.fingerprint
             key = self._generate_key( "Barbara", "Brown", "beta.com")
             self.reciever_fingerprint = key.fingerprint
-            print key.fingerprint
 
     def _generate_key(self, first_name, last_name, domain, passphrase=None):
         u""" Generate a key"""
@@ -58,9 +54,9 @@ class SimpleGPG(object):
         }
         params['Name-Real'] = '%s %s' % (first_name, last_name)
         params['Name-Email'] = ("%s.%s@%s" % (first_name, last_name, domain)).lower()
-        self.passphrase = passphrase
-        if passphrase is None:
-            self.passphrase = ("%s%s" % (first_name[0], last_name)).lower()
+        if passphrase is not None:
+			self.passphrase = passphrase
+ 
         params['Passphrase'] = self.passphrase
 
         self.log('generating keys')
@@ -95,11 +91,12 @@ class SimpleGPG(object):
         return res
 
     def sign(self, f):
-        """d = self.gpg.sign_file(open('file_111', 'w'))
-        resf = open('res', 'w')
-        resf.writelines(d.data)"""
-        print self.passphrase
-        os.popen('gpg --passphrase %s --clearsign --detach-sign -a %s '%(self.passphrase, str(f)))
+        d = self.gpg.sign_file(open(f, 'r'))
+        self.log('had signed message. result:\n %s'%d.data)
+        resf = open(self.SIGN_FILE, 'w')
+        resf.writelines(d.data)
+        return d.data
+        #subprocess.call(u'gpg --passphrase %s --clearsign --detach-sign -a 1.txt '%(self.passphrase), shell=True)
 
     def save_remove_file(self, f):
         if os.path.isfile(f):

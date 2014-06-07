@@ -32,7 +32,8 @@ class PGMainWindow(Ui_MainWindow, QtGui.QDialog):
     def select_path(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 'Open file')
         if filename:
-            self.encrypt_file = filename
+            print unicode(filename)
+            self.encrypt_file = unicode(filename)
             self.update_pathView_bar(filename)
             self.update_info(filename)
 
@@ -73,9 +74,11 @@ class PG(object):
         self.ui.update_info(log)
 
     def sign_file(self):
-        print 1
-        self.pg.sign(self.ui.encrypt_file)
-        self.ui.update_info('done')
+        signed_data = self.pg.sign(self.ui.encrypt_file)
+        res = u'Подпись файла завершилось неудачей'
+        if signed_data:
+            res = signed_data
+        self.ui.update_info(res)
 
 
 if __name__ == '__main__':
